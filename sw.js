@@ -1,5 +1,5 @@
 // Bump this version whenever you change any app file so phones pick up the update.
-const CACHE = 'clinical-hours-v9';
+const CACHE = 'clinical-hours-v10';
 const ASSETS = [
   './',
   './index.html',

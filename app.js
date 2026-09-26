@@ -2383,11 +2383,11 @@
     toast('Details saved');
   }
 
-  // ----- Pre-Health Track (Beta): shapes the Application Packet to match the application service
+  // ----- Pre-Health Track (Beta): shapes the Application Packet like a typical application for that path (not an official format)
   const TRACKS = [
     { id: 'general', name: 'General', service: '', hint: 'A simple packet with every location. Pick a track for a layout that follows an application.' },
-    { id: 'med', name: 'Pre-Med', service: 'AMCAS', hint: 'Follows the AMCAS Work and Activities entries, oldest first, with a 700 character description.' },
-    { id: 'pa', name: 'Pre-PA', service: 'CASPA', hint: 'Groups experiences by category with totals and average hours per week, like the CASPA experience sections.' },
+    { id: 'med', name: 'Pre-Med', service: 'Med School', hint: 'Numbered experiences, oldest first, laid out like a typical medical school application, with a 700 character description count.' },
+    { id: 'pa', name: 'Pre-PA', service: 'PA Program', hint: 'Experiences grouped by category with totals and average hours per week, laid out like a typical PA program application.' },
   ];
   const currentTrack = () => TRACKS.find((t) => t.id === state.prefs.track) || TRACKS[0];
 
@@ -2398,7 +2398,7 @@
         <strong>${esc(t.name)}</strong><span>${esc(t.service || 'Any')}</span></button>`).join('');
     $('#track-hint').textContent = cur.hint;
     $('#r-track-note').textContent = cur.id === 'general' ? 'Choose a Pre-Health Track in Settings to match the packet to your application.'
-      : `Packets follow the ${cur.service} layout. Change this in Settings.`;
+      : `Packets use the ${cur.name} layout. Change this in Settings.`;
   }
 
   function setTrack(id) {
@@ -2464,8 +2464,8 @@
     </div>`;
   }
 
-  // AMCAS Work and Activities: numbered entries with the fields the application asks for
-  function amcasBlock(g, i) {
+  // Pre-Med layout: numbered entries with the fields a medical school application typically asks for
+  function medBlock(g, i) {
     const d = state.locDetails[g.key] || {};
     return `<div class="loc-block">
       <h3>${i + 1}. ${esc(d.organization || g.location)}</h3>
@@ -2486,8 +2486,8 @@
     </div>`;
   }
 
-  // CASPA: experiences grouped by category, each with total and average weekly hours
-  function caspaBlock(g) {
+  // Pre-PA layout: experiences grouped by category, each with total and average weekly hours
+  function paBlock(g) {
     const d = state.locDetails[g.key] || {};
     return `<div class="loc-block">
       <h3>${esc(d.organization || g.location)}</h3>
@@ -2511,16 +2511,16 @@
     const track = currentTrack();
     if (track.id === 'med') {
       const ordered = [...groups].sort((a, b) => a.first - b.first);
-      return reportShell('AMCAS Work and Activities', list, groups, ordered.map(amcasBlock).join(''));
+      return reportShell('Experiences (Pre-Med Layout)', list, groups, ordered.map(medBlock).join(''));
     }
     if (track.id === 'pa') {
       const sections = visibleCategories().map((c) => {
         const gs = groups.filter((g) => g.category === c);
         if (!gs.length) return '';
         const hours = gs.reduce((n, g) => n + g.hours, 0);
-        return `<h2>${esc(c)} · ${fmtBig(hours)} hours</h2>${gs.map(caspaBlock).join('')}`;
+        return `<h2>${esc(c)} · ${fmtBig(hours)} hours</h2>${gs.map(paBlock).join('')}`;
       }).join('');
-      return reportShell('CASPA Experiences', list, groups, sections);
+      return reportShell('Experiences (Pre-PA Layout)', list, groups, sections);
     }
     return reportShell('Application Packet', list, groups, groups.map(generalBlock).join(''));
   }
@@ -2532,7 +2532,7 @@
     const record = {
       id: uid(),
       type,
-      title: type === 'packet' ? ({ med: 'AMCAS Work and Activities', pa: 'CASPA Experiences' }[currentTrack().id] || 'Application Packet') : 'Hours Summary',
+      title: type === 'packet' ? ({ med: 'Experiences (Pre-Med Layout)', pa: 'Experiences (Pre-PA Layout)' }[currentTrack().id] || 'Application Packet') : 'Hours Summary',
       createdAt: new Date().toISOString(),
       range: reportRangeLabel(),
       totalHours: sumHours(list),
@@ -2544,7 +2544,7 @@
     saveReports();
     renderData();
     openReport(record.id);
-    if (type === 'packet' && currentTrack().id === 'med' && groups.length > 15) toast(`AMCAS allows 15 experiences. This packet has ${groups.length}.`);
+    if (type === 'packet' && currentTrack().id === 'med' && groups.length > 15) toast(`This packet lists ${groups.length} experiences. Many applications limit how many you can enter, so check yours.`);
   }
 
   function openReport(id) {
