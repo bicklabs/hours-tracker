@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Clinical Hours</title>
+  <meta name="description" content="Log clinical, shadowing, volunteering and research hours.">
+  <meta name="theme-color" content="#F2F4F7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Hours">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <!-- Only this site's own files may load or run; nothing is sent to other servers. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <link rel="preload" href="fonts/geist-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme.js"></script>
+</head>
+<body>
+  <main>
+    <!-- CLOCK -->
+    <section id="view-home" class="view">
+      <header class="page-head">
+        <span class="head-icon" data-icon="timer"></span>
+        <span class="head-text"><h1>Clinical Hours</h1><span class="head-sub" id="home-date"></span></span>
+        <button type="button" class="settings-btn" id="btn-settings"><span data-icon="gear"></span>Settings</button>
+      </header>
+
+      <section class="card nudge-card" id="install-card" hidden>
+        <div class="nudge-row">
+          <span class="nudge-icon" data-icon="phone"></span>
+          <span class="nudge-text"><strong>Add to Your Home Screen</strong><span id="install-how"></span></span>
+        </div>
+        <p class="hint">Do this before logging hours. The Home Screen app keeps its own data, and Safari can clear website data after a week without use.</p>
+        <div class="split-actions" id="install-actions">
+          <button type="button" class="btn btn-soft" id="install-later">Not Now</button>
+          <button type="button" class="btn btn-navy" id="install-go" hidden>Install App</button>
+        </div>
+      </section>
+
+      <section class="card welcome-card" id="welcome-card" hidden>
+        <h2>Welcome to Clinical Hours</h2>
+        <div class="welcome-lines">
+          <span>Tap a category below to clock in.</span>
+          <span>Settings, at the top right, has themes, dark mode and categories.</span>
+          <span>The Quick Guide shows where everything is.</span>
+        </div>
+        <div class="split-actions">
+          <button type="button" class="btn btn-soft" id="welcome-dismiss">Got It</button>
+          <button type="button" class="btn btn-navy" id="welcome-guide">Open Quick Guide</button>
+        </div>
+      </section>
+
+      <section class="card nudge-card" id="backup-nudge" hidden>
+        <div class="nudge-row">
+          <span class="nudge-icon" data-icon="bulb"></span>
+          <span class="nudge-text"><strong>Monthly Backup</strong><span>It's a new month. Save a copy of your hours to Files.</span></span>
+        </div>
+        <div class="split-actions">
+          <button type="button" class="btn btn-soft" id="nudge-later">Not Now</button>
+          <button type="button" class="btn btn-navy" id="nudge-backup">Back Up Now</button>
+        </div>
+      </section>
+
+      <div id="home-idle" class="stack">
+        <section class="card">
+          <div class="card-head"><span class="card-icon" data-icon="clock"></span><h2>Clock In</h2><span class="card-aside">Tap a category</span></div>
+          <div class="tile-grid" id="cat-grid"></div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><span class="card-icon" data-icon="chart"></span><h2>Your Hours</h2></div>
+          <div class="segmented" role="group" aria-label="Period" id="period-seg">
+            <button type="button" data-period="week">Week</button>
+            <button type="button" data-period="month">Month</button>
+            <button type="button" data-period="all">All Time</button>
+          </div>
+          <div class="gauge-row">
+            <div class="gauge">
+              <svg viewBox="0 0 240 136" aria-hidden="true" id="gauge-svg"></svg>
+              <div class="gauge-center"><span class="gauge-num" id="gauge-num">0.00</span><span class="gauge-label" id="gauge-label"></span></div>
+            </div>
+            <div class="legend" id="gauge-legend"></div>
+          </div>
+        </section>
+      </div>
+
+      <div id="home-active" class="stack stack-fill" hidden>
+        <section class="hero" aria-label="Active Session">
+          <div class="hero-status"><span class="live-dot"></span><span class="hero-status-text">Clocked In</span><span class="hero-date" id="hero-date"></span></div>
+          <div class="hero-body">
+            <span class="hero-icon" id="hero-icon"></span>
+            <span class="hero-cat" id="hero-cat"></span>
+            <span class="hero-loc" id="hero-loc"></span>
+            <span class="hero-timer" id="hero-timer">0:00:00</span>
+            <span class="hero-caption">Hours : minutes : seconds</span>
+          </div>
+          <div class="hero-stats">
+            <div><span>Started</span><strong id="hero-start"></strong></div>
+            <div><span>This week</span><strong id="hero-week"></strong></div>
+            <div><span>This month</span><strong id="hero-month"></strong></div>
+          </div>
+          <button type="button" class="hero-out" id="btn-clockout"><span class="stop-sq" data-icon="stop"></span>Clock Out</button>
+          <button type="button" class="hero-discard" id="btn-discard">Discard This Session</button>
+        </section>
+      </div>
+
+      <section class="card" id="recent-card">
+        <div class="card-head"><span class="card-icon" data-icon="recent"></span><h2>Recent</h2><button type="button" class="pill-link" data-goto="history">See All</button></div>
+        <div class="rows" id="recent-list"></div>
+      </section>
+    </section>
+
+    <!-- CALENDAR -->
+    <section id="view-calendar" class="view" hidden>
+      <header class="page-head">
+        <span class="head-icon" data-icon="calendar"></span>
+        <span class="head-text"><h1>Calendar</h1><span class="head-sub">Tap a day to see its entries</span></span>
+      </header>
+      <div class="stack">
+        <section class="card cal-card">
+          <div class="cal-nav">
+            <h2 id="cal-title"></h2>
+            <button type="button" class="round-btn" id="cal-prev" aria-label="Previous Month" data-icon="back"></button>
+            <button type="button" class="round-btn" id="cal-next" aria-label="Next Month" data-icon="next"></button>
+          </div>
+          <div class="cal-week" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+          <div class="cal-grid" id="cal-grid"></div>
+          <div class="cal-foot">
+            <div class="cal-legend" id="cal-legend"></div>
+            <button type="button" class="pill-link" id="cal-today">Today</button>
+          </div>
+        </section>
+        <section class="card" id="cal-day"></section>
+        <section class="card" id="cal-summary"></section>
+      </div>
+    </section>
+
+    <!-- ADD -->
+    <section id="view-add" class="view" hidden>
+      <header class="page-head">
+        <span class="head-icon" data-icon="addcircle"></span>
+        <span class="head-text"><h1>Add Entry</h1><span class="head-sub">For a shift you forgot to clock</span></span>
+      </header>
+      <section class="card" id="repeat-card" hidden>
+        <div class="card-head"><span class="card-icon" data-icon="repeat"></span><h2>Repeat a Recent Shift</h2></div>
+        <div class="repeat-row" id="repeat-list"></div>
+      </section>
+      <form id="manual-form" class="stack entry-form" novalidate autocomplete="off">
+        <div class="fields stack"></div>
+        <button type="submit" class="btn btn-primary btn-block">Save Entry</button>
+      </form>
+    </section>
+
+    <!-- HISTORY -->
+    <section id="view-history" class="view" hidden>
+      <header class="page-head">
+        <span class="head-icon" data-icon="history"></span>
+        <span class="head-text"><h1>History</h1><span class="head-sub">Tap an entry to edit it</span></span>
+      </header>
+      <div class="stack">
+        <label class="search-pill">
+          <span data-icon="search"></span>
+          <span class="sr-only">Search entries</span>
+          <input type="search" id="h-search" placeholder="Search locations and notes" autocomplete="off" enterkeyhint="search">
+        </label>
+        <section class="card">
+          <div class="big-stat stacked"><span class="big-num" id="h-total">0.00</span><span class="big-label" id="h-count"></span></div>
+          <div class="chip-row" role="group" aria-label="Category Filter" id="h-chips"></div>
+          <label class="select-pill">
+            <span data-icon="pin"></span>
+            <span class="sr-only">Location</span>
+            <select id="f-location"></select>
+            <span data-icon="down"></span>
+          </label>
+        </section>
+        <div id="history-list" class="stack"></div>
+      </div>
+    </section>
+
+    <!-- REPORTS -->
+    <section id="view-data" class="view" hidden>
+      <header class="page-head">
+        <span class="head-icon" data-icon="report"></span>
+        <span class="head-text"><h1>Reports</h1><span class="head-sub">Summaries, exports and backups</span></span>
+      </header>
+      <div class="segmented" role="group" aria-label="Reports section" id="report-seg">
+        <button type="button" data-seg="summary">Summary</button>
+        <button type="button" data-seg="export">Export</button>
+        <button type="button" data-seg="backup">Backup</button>
+      </div>
+
+      <!-- Summary -->
+      <div class="stack" id="rep-summary">
+        <section class="card">
+          <div class="year-row">
+            <label class="select-pill compact">
+              <span class="sr-only">Year</span>
+              <select id="r-year"></select>
+              <span data-icon="down"></span>
+            </label>
+            <button type="button" class="pill-link" id="r-year-edit">Year Months</button>
+          </div>
+          <div class="year-months" id="r-year-months" hidden>
+            <div class="two-col">
+              <label class="field"><span>Year starts in</span><select id="r-year-start"></select></label>
+              <label class="field"><span>Year ends in</span><select id="r-year-end"></select></label>
+            </div>
+            <p class="hint">Months outside this span, like a summer break, aren't counted in any year.</p>
+          </div>
+          <div class="big-stat stacked"><span class="big-num" id="r-total">0.00</span><span class="big-label" id="r-count"></span></div>
+          <div class="cat-strip" id="r-cats"></div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><span class="card-icon" data-icon="history"></span><h2>Application Summary</h2><span class="soft-pill" id="r-loc-count"></span></div>
+          <p class="hint">Tap a location to add contact details and a description for your applications.</p>
+          <div class="rows" id="r-locations"></div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><span class="card-icon" data-icon="report"></span><h2>Create a Report</h2><span class="beta-pill">Beta</span></div>
+          <p class="hint" id="r-track-note"></p>
+          <div class="report-option">
+            <span class="report-text"><strong>Application Packet</strong><span>Every location's details, dates, hours and highlights in one file</span></span>
+            <button type="button" class="btn btn-primary btn-small" id="make-packet">Create</button>
+          </div>
+          <div class="report-option">
+            <span class="report-text"><strong>Hours Summary</strong><span>A one-page overview for advisors and letter writers</span></span>
+            <button type="button" class="btn btn-outline btn-small" id="make-summary">Create</button>
+          </div>
+          <p class="hint">Reports open as a page you can save as a PDF, then AirDrop, email or keep in Files for your laptop.</p>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><span class="card-icon" data-icon="recent"></span><h2>Saved Reports</h2><span class="soft-pill" id="r-saved-count"></span></div>
+          <div class="rows" id="r-saved"></div>
+          <p class="hint">Each report keeps a snapshot of your hours on the day you made it.</p>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><span class="card-icon" data-icon="pin"></span><h2>Saved Locations</h2><span class="card-aside" id="loc-count"></span></div>
+          <div class="rows" id="custom-locations"></div>
+        </section>
+      </div>
+
+      <!-- Export -->
+      <div class="stack" id="rep-export" hidden>
+        <section class="card">
+          <div class="card-head"><span class="card-icon" data-icon="table"></span><h2>Spreadsheet</h2><span class="soft-pill">CSV</span></div>
+          <div class="preview" id="x-preview"></div>
+          <div class="check-head"><span>Categories</span><button type="button" class="pill-link" id="x-toggle-all"></button></div>
+          <div class="check-list" id="x-cats" role="group" aria-label="Categories to export"></div>
+          <div class="two-col">
+            <label class="field"><span>From</span><input type="date" id="x-from"></label>
+            <label class="field"><span>To</span><input type="date" id="x-to"></label>
+          </div>
+          <div class="big-stat stacked small"><span class="big-num" id="x-hours">0.00</span><span class="big-label" id="x-count"></span></div>
+          <button type="button" class="btn btn-primary btn-block" id="btn-export"><span data-icon="upload"></span>Export CSV</button>
+          <button type="button" class="btn btn-outline btn-block" id="btn-copy"><span data-icon="copy"></span>Copy Rows for Excel</button>
+          <p class="hint">Copy rows leaves out the header. Click the first empty row of your Excel table and paste.</p>
+        </section>
+      </div>
+
+      <!-- Backup -->
+      <div class="stack" id="rep-backup" hidden>
+        <section class="card">
+          <div class="card-head"><span class="card-icon" data-icon="download"></span><h2>Import Hours</h2><span class="beta-pill">Beta</span></div>
+          <p class="muted">Bring in hours you've tracked somewhere else. Imports only add entries, and you can undo one anytime.</p>
+          <div class="imp-options">
+            <label class="imp-option">
+              <span class="nudge-icon" data-icon="table"></span>
+              <span class="row-main"><span class="row-title">Choose a Spreadsheet</span><span class="row-sub">Excel (.xlsx) or CSV file from Files</span></span>
+              <span class="chev" data-icon="next"></span>
+              <input type="file" id="imp-file" accept=".xlsx,.csv,.tsv,.txt,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+            </label>
+            <button type="button" class="imp-option" id="imp-paste-open">
+              <span class="nudge-icon" data-icon="paste"></span>
+              <span class="row-main"><span class="row-title">Paste Rows</span><span class="row-sub">Copy rows from Excel or Google Sheets</span></span>
+              <span class="chev" data-icon="next"></span>
+            </button>
+            <button type="button" class="imp-option" id="imp-template">
+              <span class="nudge-icon" data-icon="download"></span>
+              <span class="row-main"><span class="row-title">Download a Template</span><span class="row-sub">A blank sheet, the way the app reads it</span></span>
+              <span class="chev" data-icon="next"></span>
+            </button>
+          </div>
+        </section>
+        <section class="card" id="imp-past-card" hidden>
+          <div class="card-head"><span class="card-icon" data-icon="history"></span><h2>Past Imports</h2></div>
+          <div class="imp-past" id="imp-past"></div>
+        </section>
+        <section class="card">
+          <div class="card-head"><span class="card-icon" data-icon="shield"></span><h2>Backup</h2><span id="last-backup"></span></div>
+          <p class="muted">One file with everything in the app. Restore it on a new phone.</p>
+          <ul class="included-list">
+            <li>Every entry, with notes and highlights</li>
+            <li>Categories, colors, icons and goals</li>
+            <li>Saved locations and their application details</li>
+            <li>Saved reports and past imports</li>
+            <li>Your theme and appearance settings</li>
+          </ul>
+          <div class="two-col">
+            <button type="button" class="btn btn-navy" id="btn-backup">Back Up Now</button>
+            <label class="btn btn-outline file-btn">Restore<input type="file" id="restore-file" accept="application/json,.json"></label>
+          </div>
+        </section>
+        <p class="footer-note" id="storage-note"></p>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar" aria-label="Main">
+    <button type="button" data-view="home"><span data-icon="clock"></span>Clock</button>
+    <button type="button" data-view="calendar"><span data-icon="calendar"></span>Calendar</button>
+    <button type="button" data-view="add" class="tab-add"><span class="fab" data-icon="plus"></span>Add</button>
+    <button type="button" data-view="history"><span data-icon="history"></span>History</button>
+    <button type="button" data-view="data"><span data-icon="report"></span>Reports</button>
+  </nav>
+
+  <!-- Clock-in sheet -->
+  <dialog id="clockin-sheet" class="sheet">
+    <form id="clockin-form" novalidate autocomplete="off">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <span id="ci-badge"></span>
+        <span class="sheet-title"><strong id="ci-title"></strong><span>Where are you working today?</span></span>
+        <button type="button" class="round-btn" data-close aria-label="Close" data-icon="close"></button>
+      </div>
+      <div class="loc-list" id="ci-locations" role="radiogroup" aria-label="Location"></div>
+      <label class="field">
+        <span>Or add a new location</span>
+        <input type="text" id="ci-new" class="input-pill" placeholder="Location name" enterkeyhint="go">
+      </label>
+      <p class="form-error" id="ci-error" role="alert" hidden></p>
+      <div class="two-col">
+        <button type="button" class="btn btn-outline" data-close>Cancel</button>
+        <button type="submit" class="btn btn-primary" id="ci-submit">Clock In</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Clock-out note -->
+  <dialog id="note-sheet" class="sheet">
+    <form id="note-form" novalidate autocomplete="off">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <span class="done-icon" data-icon="checkc"></span>
+        <span class="sheet-title"><strong>Shift Logged</strong><span id="note-sub"></span></span>
+      </div>
+      <section class="card">
+        <label class="field">
+          <span>Anything memorable today?</span>
+          <textarea id="note-text" rows="4" placeholder="A patient interaction, a new skill, or something you learned"></textarea>
+        </label>
+        <label class="set-row hl-row">
+          <span class="star-badge" data-icon="starfill"></span>
+          <span class="row-main"><span class="row-title">Mark as Highlight</span></span>
+          <input type="checkbox" class="switch" role="switch" id="note-highlight">
+        </label>
+      </section>
+      <div class="two-col">
+        <button type="button" class="btn btn-outline" id="note-skip">Skip</button>
+        <button type="submit" class="btn btn-primary">Save Note</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 24-hour check -->
+  <dialog id="long-dialog" class="modal">
+    <form class="modal-body" id="long-form" novalidate>
+      <span class="modal-icon warn" data-icon="timer"></span>
+      <h2>Still Clocked In?</h2>
+      <p id="long-msg"></p>
+      <div class="pick-group">
+        <span class="pick-label">When did you leave?</span>
+        <label class="pick-row">
+          <span data-icon="calendar"></span><span class="pick-value" id="long-date-text"></span><span class="pick-change">Change</span>
+          <input type="date" id="long-date" aria-label="Date you left">
+        </label>
+        <label class="pick-row">
+          <span data-icon="clock"></span><span class="pick-value" id="long-time-text"></span><span class="pick-change">Change</span>
+          <input type="time" id="long-time" aria-label="Time you left">
+        </label>
+        <span class="pick-note" id="long-hours"></span>
+        <p class="form-error" id="long-error" role="alert" hidden></p>
+      </div>
+      <div class="ask-buttons">
+        <button type="submit" class="btn btn-primary">Clock Out at This Time</button>
+        <button type="button" class="btn btn-outline" id="long-still">I'm Still Here</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Settings sheet -->
+  <dialog id="settings-sheet" class="sheet">
+    <div class="sheet-body">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <span class="head-icon" data-icon="gear"></span>
+        <span class="sheet-title"><strong>Settings</strong><span>Choose what shows in the app</span></span>
+        <button type="button" class="round-btn" data-close aria-label="Close" data-icon="close"></button>
+      </div>
+      <button type="button" class="guide-link" id="open-guide">
+        <span class="card-icon" data-icon="guide"></span>
+        <span class="row-main"><span class="row-title">Quick Guide</span><span class="row-sub">Where to find everything</span></span>
+        <span data-icon="next"></span>
+      </button>
+      <section class="card">
+        <div class="card-head"><span class="card-icon" data-icon="clipboard"></span><h2>Categories</h2></div>
+        <div class="rows" id="settings-cats"></div>
+        <button type="button" class="btn btn-outline btn-block" id="btn-add-cat"><span data-icon="plus"></span>Add Category</button>
+        <p class="hint">Switch a category off to hide it everywhere in the app. Its hours are kept and come back when you switch it on.</p>
+      </section>
+      <section class="card">
+        <div class="card-head"><span class="card-icon" data-icon="cap"></span><h2>Pre-Health Track</h2><span class="beta-pill">Beta</span></div>
+        <div class="track-grid" id="track-grid" role="radiogroup" aria-label="Pre-Health Track"></div>
+        <p class="hint" id="track-hint"></p>
+      </section>
+      <section class="card">
+        <div class="card-head"><span class="card-icon" data-icon="palette"></span><h2>Color Theme</h2></div>
+        <div class="theme-grid" id="theme-grid" role="radiogroup" aria-label="Color Theme"></div>
+      </section>
+      <section class="card">
+        <div class="card-head"><span class="card-icon" data-icon="moon"></span><h2>Appearance</h2></div>
+        <div class="mode-grid" id="mode-grid" role="radiogroup" aria-label="Appearance"></div>
+        <p class="hint">Every color theme has a dark version.</p>
+      </section>
+      <section class="card">
+        <div class="card-head"><span class="card-icon" data-icon="shield"></span><h2>Privacy</h2></div>
+        <ul class="privacy-list">
+          <li>Your entries, locations and settings are saved only in this app on this phone.</li>
+          <li>Nothing is sent to any server. There are no accounts, ads or tracking.</li>
+          <li>Anyone else using the app has their own separate data. No one can see yours.</li>
+          <li>Deleting the app from your home screen erases its data, so back up regularly.</li>
+        </ul>
+        <button type="button" class="btn btn-danger-outline btn-block" id="btn-erase"><span data-icon="trash"></span>Erase All Data</button>
+      </section>
+      <button type="button" class="btn btn-primary btn-block" data-close>Done</button>
+      <p class="footer-note">Clinical Hours · Version 9</p>
+    </div>
+  </dialog>
+
+  <!-- Category editor -->
+  <dialog id="cat-sheet" class="sheet">
+    <form id="cat-form" novalidate autocomplete="off">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <span id="cat-preview"></span>
+        <span class="sheet-title"><strong id="cat-sheet-title">New Category</strong><span>Pick a name, icon, color and goal</span></span>
+        <button type="button" class="round-btn" data-close aria-label="Close" data-icon="close"></button>
+      </div>
+      <section class="card">
+        <label class="field"><span>Name</span><input type="text" name="name" maxlength="24" placeholder="For example, Scribing"></label>
+        <fieldset class="cat-field"><legend>Icon</legend><div class="icon-grid" id="cat-icons" role="radiogroup" aria-label="Icon"></div></fieldset>
+        <fieldset class="cat-field"><legend>Color</legend><div class="shade-grid" id="cat-shades" role="radiogroup" aria-label="Color"></div></fieldset>
+        <label class="field">
+          <span>Hour goal (optional)</span>
+          <span class="goal-input"><input type="number" name="goal" min="1" max="100000" step="1" inputmode="numeric" placeholder="None"><span>hrs</span></span>
+        </label>
+        <p class="hint">Leave blank for no goal. A goal adds a progress bar to this category's tile.</p>
+        <p class="form-error" id="cat-error" role="alert" hidden></p>
+      </section>
+      <div class="two-col">
+        <button type="button" class="btn btn-outline" data-close>Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+      <button type="button" class="btn btn-danger-outline btn-block" id="cat-delete" hidden>Delete Category</button>
+      <p class="hint center" id="cat-delete-note" hidden></p>
+    </form>
+  </dialog>
+
+  <!-- Edit page -->
+  <dialog id="edit-sheet" class="page-sheet">
+    <form id="edit-form" class="entry-form" novalidate autocomplete="off">
+      <header class="page-head back-head">
+        <button type="button" class="round-btn" data-close aria-label="Back" data-icon="back"></button>
+        <span class="head-text center"><h1>Edit Entry</h1><span class="head-sub" id="edit-sub"></span></span>
+        <span class="head-spacer"></span>
+      </header>
+      <div class="stack">
+        <div class="notice" id="edit-notice" hidden><span data-icon="timer"></span><span>Recorded with clock in and out. You can still change any detail below.</span></div>
+        <div class="fields stack"></div>
+        <div class="two-col">
+          <button type="button" class="btn btn-danger-outline" id="btn-delete">Delete Entry</button>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Location page -->
+  <dialog id="loc-sheet" class="page-sheet">
+    <form id="loc-form" novalidate autocomplete="off">
+      <header class="page-head back-head">
+        <button type="button" class="round-btn" data-close aria-label="Back" data-icon="back"></button>
+        <span class="head-text center"><h1 id="loc-title"></h1><span class="head-sub" id="loc-sub"></span></span>
+        <span class="head-spacer"></span>
+      </header>
+      <div class="stack">
+        <section class="card" id="loc-stats"></section>
+        <section class="card">
+          <div class="card-head"><span class="card-icon" data-icon="clipboard"></span><h2>Application Details</h2><span id="loc-missing"></span></div>
+          <label class="field"><span>Organization</span><input type="text" name="organization" maxlength="120" placeholder="Official name, if different"></label>
+          <label class="field"><span>Experience type</span><select name="experienceType"></select></label>
+          <div class="two-col">
+            <label class="field"><span>Contact name</span><input type="text" name="contactName" maxlength="80"></label>
+            <label class="field"><span>Title</span><input type="text" name="contactTitle" maxlength="80"></label>
+          </div>
+          <label class="field"><span>Contact email</span><input type="email" name="contactEmail" maxlength="120" inputmode="email"></label>
+          <div class="two-col">
+            <label class="field"><span>Phone</span><input type="tel" name="contactPhone" maxlength="30" inputmode="tel"></label>
+            <label class="field"><span>City, state</span><input type="text" name="city" maxlength="80"></label>
+          </div>
+          <label class="field"><span>Description</span><textarea name="description" rows="5" maxlength="700" placeholder="What you did and what you learned"></textarea></label>
+          <span class="char-count" id="loc-chars"></span>
+        </section>
+        <section class="card" id="loc-highlights"></section>
+        <div class="notice"><span data-icon="report"></span><span>These details go into your Application Packet with every other location. Create it in Reports.</span></div>
+        <button type="submit" class="btn btn-primary btn-block">Save Details</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Quick Guide -->
+  <dialog id="guide-sheet" class="page-sheet">
+    <div class="page-body">
+      <header class="page-head back-head">
+        <button type="button" class="round-btn" data-close aria-label="Back" data-icon="back"></button>
+        <span class="head-text center"><h1>Quick Guide</h1><span class="head-sub">Where to find everything</span></span>
+        <span class="head-spacer"></span>
+      </header>
+      <div class="stack" id="guide-list"></div>
+    </div>
+  </dialog>
+
+  <!-- Import -->
+  <dialog id="import-sheet" class="page-sheet">
+    <div class="page-body">
+      <header class="page-head back-head">
+        <button type="button" class="round-btn" id="imp-back" aria-label="Back" data-icon="back"></button>
+        <span class="head-text center"><h1 id="imp-title">Import Hours</h1><span class="head-sub" id="imp-sub"></span></span>
+        <button type="button" class="round-btn" id="imp-close" aria-label="Close" data-icon="close"></button>
+      </header>
+      <div class="imp-progress" id="imp-progress" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="stack" id="imp-body"></div>
+      <div class="imp-foot" id="imp-foot">
+        <div id="imp-pre"></div>
+        <p class="form-error" id="imp-error" role="alert" hidden></p>
+        <button type="button" class="btn btn-primary btn-block" id="imp-next"></button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Report viewer -->
+  <dialog id="report-sheet" class="page-sheet">
+    <div class="page-body">
+      <header class="page-head back-head">
+        <button type="button" class="round-btn" data-close aria-label="Back" data-icon="back"></button>
+        <span class="head-text center"><h1 id="report-title"></h1><span class="head-sub" id="report-sub"></span></span>
+        <span class="head-spacer"></span>
+      </header>
+      <div class="stack">
+        <button type="button" class="btn btn-primary btn-block" id="report-print"><span data-icon="download"></span>Save as PDF</button>
+        <p class="hint center">Choose Print, then share or save the preview as a PDF.</p>
+        <div class="report-paper" id="report-body"></div>
+        <button type="button" class="btn btn-danger-outline btn-block" id="report-delete">Delete This Report</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Confirm dialog -->
+  <dialog id="ask-dialog" class="modal">
+    <div class="modal-body">
+      <span class="modal-icon" id="ask-icon"></span>
+      <h2 id="ask-title"></h2>
+      <p id="ask-message"></p>
+      <div id="ask-buttons" class="ask-buttons"></div>
+    </div>
+  </dialog>
+
+  <button type="button" id="update-banner" class="update-banner" hidden>New version ready · Tap to update</button>
+  <div id="toast" class="toast" role="status" aria-live="polite"><span id="toast-text"></span><button type="button" id="toast-action" hidden></button></div>
+  <div id="print-root" aria-hidden="true"></div>
+
+  <template id="entry-fields-tpl">
+    <section class="card">
+      <fieldset class="cat-field">
+        <legend>Category</legend>
+        <div class="segmented seg-grid-2" data-role="cats"></div>
+      </fieldset>
+      <label class="field">
+        <span>Location</span>
+        <select name="location"></select>
+      </label>
+      <label class="field" data-role="new-location" hidden>
+        <span>New location name</span>
+        <input type="text" name="newLocation" placeholder="Location name">
+      </label>
+      <label class="field">
+        <span>Date</span>
+        <input type="date" name="date">
+      </label>
+      <div class="two-col">
+        <label class="field"><span>Start</span><input type="time" name="start"></label>
+        <label class="field"><span>End</span><input type="time" name="end"></label>
+      </div>
+      <p class="form-error" data-role="error" role="alert" hidden></p>
+    </section>
+    <section class="card duration-card">
+      <span class="card-icon" data-icon="timer"></span>
+      <span class="duration-text"><span>Duration</span><strong><span data-role="duration">0.00</span> <small>hrs</small></strong><em data-role="overnight" hidden>Ends the next day</em></span>
+      <span class="soft-pill" data-role="date-pill" hidden></span>
+    </section>
+    <section class="card">
+      <label class="field">
+        <span>Notes (optional)</span>
+        <textarea name="notes" rows="3" placeholder="What did you see or do?"></textarea>
+      </label>
+      <label class="set-row hl-row">
+        <span class="star-badge" data-icon="starfill"></span>
+        <span class="row-main"><span class="row-title">Highlight</span></span>
+        <input type="checkbox" class="switch" role="switch" name="highlight">
+      </label>
+    </section>
+  </template>
+
+  <script src="importer.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
