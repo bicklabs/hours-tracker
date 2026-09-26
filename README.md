@@ -14,14 +14,14 @@
   <img alt="No license selected yet" src="https://img.shields.io/badge/license-not_yet_selected-6B7280?style=flat-square">
 </p>
 
-> **Independent project.** This is an independent organizational tool. It is not affiliated with, endorsed by, or sponsored by the Association of American Medical Colleges (AAMC), AMCAS, CASPA, or any medical school or PA program. See [Disclaimer](#disclaimer).
+> **Independent project.** This is an independent organizational tool. It is not affiliated with, endorsed by, or sponsored by any application service, medical school or PA program, or the organizations that run them. See [Disclaimer](#disclaimer).
 
 ## What You Can Do
 
 | | | |
 |---|---|---|
 | **Clock In and Out**<br>One tap to start a shift. Add a note and Highlight the moments worth writing about. | **Log Past Shifts**<br>Forgot to clock in? Add it later, or repeat a recent shift in one tap. Overlaps get flagged. | **Search Your History**<br>Find any note or location. Filter by category, location or Highlights, and undo a delete. |
-| **Application Reports** `Beta`<br>An Application Packet and an Hours Summary, saved as PDFs. Choose a Pre-Med or Pre-PA layout modeled on the AMCAS and CASPA experience sections. | **Import Your Old Hours** `Beta`<br>Bring in an Excel or CSV file, or paste rows from Google Sheets. Every import can be undone. | **Export and Back Up**<br>CSV for Excel, plus one backup file with everything. Restore it on a new phone. |
+| **Application Reports** `Beta`<br>An Application Packet and an Hours Summary, saved as PDFs. Choose a General, Pre-Med or Pre-PA layout for your experiences. | **Import Your Old Hours** `Beta`<br>Bring in an Excel or CSV file, or paste rows from Google Sheets. Every import can be undone. | **Export and Back Up**<br>CSV for Excel, plus one backup file with everything. Restore it on a new phone. |
 | **Your Own Categories**<br>Add, rename, recolor or hide categories. Set an hour goal and watch the gauge fill. | **Six Color Themes**<br>Blue, Rose, Blossom, Lavender, Sage and Sunset, each with a dark version. | **Stored on Your Device**<br>No account. The app has no analytics and doesn't send your entries anywhere. See [Data and Privacy](#data-and-privacy). |
 
 ### Screenshots
@@ -139,10 +139,10 @@ Under Reports › Summary › **Create a Report** (`Beta`) the app makes two kin
 
 **Pre-Health Track** (`Beta`, in Settings) changes how the Application Packet is laid out:
 - **General:** a simple packet listing every location.
-- **Pre-Med:** numbered entries, oldest first, with fields and a description count modeled on the AMCAS Work and Activities section.
-- **Pre-PA:** experiences grouped by category with totals and average hours per week, modeled on the CASPA experience sections.
+- **Pre-Med:** numbered entries, oldest first, with the kinds of fields a medical school application typically asks for and a 700 character description count.
+- **Pre-PA:** experiences grouped by category with totals and average hours per week, laid out like a typical PA program application.
 
-These layouts are organizational aids. They are **not official AMCAS or CASPA formats**, they can't be uploaded or submitted to an application service, and they haven't been checked against the services' current instructions. Application requirements change, so always read the current instructions and enter your experiences in the application yourself. You are responsible for the accuracy of what you submit.
+These layouts are organizational aids. They are **not official formats** from any application service, they can't be uploaded or submitted to one, and they haven't been checked against any service's current instructions. Application requirements change, so always read the current instructions and enter your experiences in the application yourself. You are responsible for the accuracy of what you submit.
 
 ## Importing Hours `Beta`
 Reports › Backup › **Import Hours** brings in hours tracked somewhere else. Everything is read on the phone; nothing is uploaded.
@@ -188,7 +188,9 @@ Then open http://localhost:8765.
 Upload the folder to any static host that serves over HTTPS, such as GitHub Pages, Netlify or Cloudflare. This repository is currently deployed with GitHub Pages (stable) and Cloudflare (beta).
 
 ### Updating the App
-After you change any file, bump `CACHE` in `sw.js` (for example `clinical-hours-v10`) and upload the changed files. The next time the app is opened, it downloads the new version and shows a **"New version ready · Tap to update"** banner. If you skip the version bump, phones keep running the old copy. A shift in progress is stored on the device and isn't affected by an update.
+After you change any app file, change the version in two places: `CACHE` in `sw.js` (for example `clinical-hours-1.0.3`) and the version at the bottom of Settings in `index.html`. Then upload the changed files. The next time the app is opened, it downloads the new version and shows a **"New version ready · Tap to update"** banner. If you skip the version change, phones keep running the old copy. A shift in progress is stored on the device and isn't affected by an update.
+
+Versions use `MAJOR.MINOR.PATCH`: a patch for fixes, a minor for new features, a major for big changes. The `dev` branch adds a suffix such as `-beta.1` (for example `1.1.0-beta.1`), which is dropped when the change is promoted to `main`. Versions before 1.0.0 were plain numbers: version 9 is 1.0.0, version 10 is 1.0.1 and version 11 is 1.0.2.
 
 ### Testing Changes Before Everyone Gets Them
 The repo has two branches:
@@ -211,7 +213,7 @@ The app has no runtime dependencies, no package manager and no build step. The o
 
 ## Disclaimer
 
-Clinical Hours is an organizational tool. It is not affiliated with, endorsed by, or sponsored by the Association of American Medical Colleges (AAMC), AMCAS, CASPA, or any medical school or PA program. "AMCAS," "AAMC" and "CASPA" are names used only to describe the kind of application the report layouts are modeled on. They belong to their respective owners.
+Clinical Hours is an independent organizational tool. It is not affiliated with, endorsed by, or sponsored by any application service, medical school or PA program, or the organizations that run them. The report layouts are general aids and are not official application formats.
 
 You are responsible for checking that your hours, dates, locations, contact details and descriptions are accurate, and for entering them correctly in any application. The app can contain bugs, and its reports and totals are not official records. The software is provided as is, without warranty. Keep your own records, and back them up.
 

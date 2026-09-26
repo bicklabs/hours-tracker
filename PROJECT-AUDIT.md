@@ -1,6 +1,6 @@
 # Project Audit
 
-**Audited:** 2026-09-26, on branch `dev` (version 9). **Method:** reading the source, pattern searches over every file, comparing the served pages to the repository, and one browser session with network monitoring. **Not a legal review and not a penetration test.** Where something couldn't be established, it says so.
+**Audited:** 2026-09-26, on branch `dev` (then labeled "version 9", now 1.0.0 under semantic versioning; versions 10 and 11 became 1.0.1 and 1.0.2). **Method:** reading the source, pattern searches over every file, comparing the served pages to the repository, and one browser session with network monitoring. **Not a legal review and not a penetration test.** Where something couldn't be established, it says so.
 
 Classification used below: **VERIFIED** (checked in code or by observation), **NEEDS MANUAL REVIEW** (a decision or outside fact only you can settle), **POTENTIAL ISSUE** (a real weakness or risk), **NOT APPLICABLE**.
 
@@ -101,12 +101,11 @@ Verified by reading `app.js` and `index.html`. Full table in the README.
 - **Not present:** accounts, sync, encryption, notifications, submission to application services, tests.
 - **Old documentation that no longer matched:** button names "Backup Data" and "Restore from Backup" (now "Back Up Now" and "Restore"), the paste subtitle mentioning Numbers, and the old two-domain testing note. All updated.
 
-## 7. AMCAS, CASPA and Trademark Considerations
+## 7. Application-Service Names and Trademark Considerations
 
-- **Where the names appear in the app (POTENTIAL ISSUE):** Settings shows "Pre-Med (AMCAS)" and "Pre-PA (CASPA)". Report titles are "AMCAS Work and Activities" and "CASPA Experiences". These are printed on generated PDFs and could read as official forms. A toast says "AMCAS allows 15 experiences." **Proposed change (not made, code change):** retitle reports "Work and Activities (AMCAS-Style)" and "Experiences (CASPA-Style)", and reword or drop the 15 experience toast unless verified.
-- **Facts baked in from general knowledge (NEEDS MANUAL REVIEW):** the 700 character description count, the 15 experience limit, AMCAS field names, and CASPA's grouping and hours per week. These came from AI-assisted development, not from a checked source. Verify them against current official instructions or remove the specifics before removing the Beta tag.
-- **Documentation:** the README now states the app is independent, not affiliated with or endorsed by AAMC, AMCAS, CASPA, or any school, and that the layouts aren't official formats. No logos or brand assets are used.
-- **Legal question (attorney):** whether using these names to describe compatibility is acceptable for your use.
+- **Status (VERIFIED, changed in version 10):** the app and README no longer use the names of specific application services. Settings shows "Pre-Med" and "Pre-PA" with the labels "Med School" and "PA Program". Reports are titled "Experiences (Pre-Med Layout)" and "Experiences (Pre-PA Layout)". The "allows 15 experiences" message was replaced with a general note. A search of the repository for the service names, other than this audit and its history, finds none. Earlier versions (1 through 9, in the old repository history) did use them.
+- **Documentation:** the README states the project is independent, isn't affiliated with or endorsed by any application service, school or program, and that the layouts aren't official formats. No logos or brand assets are used.
+- **Layouts still resemble real applications (NEEDS MANUAL REVIEW):** the 700 character description count, the field names and the hours-per-week figure were chosen from general knowledge of typical applications, not from a checked source. They are labeled Beta and described as typical layouts, not official ones. Verify them against current application instructions before removing the Beta tags.
 
 ## 8. Dependencies and Licenses
 
@@ -128,7 +127,7 @@ Verified by reading `app.js` and `index.html`. Full table in the README.
 
 - The README has a disclosure that Claude assisted with code generation, debugging, refactoring, implementation and documentation, and that you handled concept, direction, design decisions, testing, review, repository management and maintenance. It doesn't say all code is human-written or all AI-written.
 - **NEEDS MANUAL REVIEW (attorney):** how copyright applies to AI-assisted work is unsettled and depends on where you are. The documentation makes no ownership claim. Ask before choosing a license or accepting outside contributions.
-- The AMCAS and CASPA specifics (section 7) are the biggest accuracy risk from AI assistance.
+- The application layout details (section 7) are the biggest accuracy risk from AI assistance.
 
 ## 11. Privacy Policy Assessment
 
@@ -138,7 +137,7 @@ Based on the code, the project doesn't collect user data: no accounts, analytics
 
 - In-app text still says the Home Screen app "isn't cleared" and Safari "can clear website data after a week" (`index.html` install card). NEEDS MANUAL REVIEW, proposed rewording.
 - In-app Privacy list says "Nothing is sent to any server." That matches the code for user data, but hosts still see requests. Optional rewording: "The app doesn't send your entries anywhere."
-- `main`'s live README (until `dev` is promoted) still says things this audit didn't support: "Private by design," "no server," "Ready for your applications," and "match AMCAS or CASPA." The banner image also says "Private by design." **Promote the new README soon.**
+- The version 9 README used the names of specific application services, which version 10 removes. Upload the version 10 README, app files and audit together.
 - The `_headers` comment says to delete it when merging to `main`.
 - No screenshots in the repo. No tests. No roadmap and no contribution policy exist; none were invented.
 
@@ -146,15 +145,15 @@ Based on the code, the project doesn't collect user data: no accounts, analytics
 
 - [ ] Choose a license (or decide to stay unlicensed) and add a `LICENSE` file.
 - [ ] Turn on **Private vulnerability reporting** in the repository's Settings › Code security, so SECURITY.md's first option works.
-- [ ] Decide on the code changes proposed above: report titles and "AMCAS/CASPA" labels, the 15 experience toast, sanitizing restored reports, CSV formula protection, and the install card wording.
-- [ ] Verify AMCAS and CASPA layouts against the current official instructions before removing the Beta tags.
+- [ ] Decide on the remaining code changes proposed above: sanitizing restored reports, CSV formula protection, and the install card wording. (The report titles and service-name labels were already made generic in version 10.)
+- [ ] Verify the Pre-Med and Pre-PA layouts against current application instructions before removing the Beta tags.
 - [ ] Confirm where the Geist font files came from.
 - [ ] Note where the icon drawings came from (or replace them with a licensed set).
 - [ ] Keep other GitHub Pages sites off this account, or move to a custom domain.
 - [ ] Decide whether the name in git history's removed LICENSE is fine to leave in public history.
-- [ ] Ask an attorney about: AI-assisted code ownership, use of the AMCAS, AAMC and CASPA names, whether you need a formal privacy policy, and your license choice.
+- [ ] Ask an attorney about: AI-assisted code ownership, whether you need a formal privacy policy, and your license choice.
 - [ ] Promote the updated documentation to `main` once you've reviewed it.
 
 ## 14. Claims to Avoid
 
-Don't say the app is "secure," "encrypted," "private by design," "HIPAA compliant," "legally compliant," "official," "AMCAS-compatible," or "AAMC approved." Don't say "no server" without noting the hosts, and don't say backups are secure. Don't say the code is fully human-written or fully AI-written, or claim who owns the copyright.
+Don't say the app is "secure," "encrypted," "private by design," "HIPAA compliant," "legally compliant," "official," or "compatible with" or "approved by" any application service. Don't say "no server" without noting the hosts, and don't say backups are secure. Don't say the code is fully human-written or fully AI-written, or claim who owns the copyright.
