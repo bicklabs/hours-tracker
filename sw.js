@@ -1,8 +1,7 @@
 // Change this version whenever you change any app file so phones pick up the update. Keep it the same as the version in index.html.
-const CACHE = 'clinical-hours-1.0.2-beta.1';
+const CACHE = 'clinical-hours-1.0.2-beta.2';
 const ASSETS = [
   './',
-  './index.html',
   './styles.css',
   './app.js',
   './importer.js',
@@ -35,6 +34,11 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// A cached response that came through a redirect can't be used to answer a page load, so hand back a plain copy.
+const plain = (res) => (res.redirected
+  ? new Response(res.body, { status: res.status, statusText: res.statusText, headers: res.headers })
+  : res);
+
 // Serve the app from the versioned cache so it opens instantly and works offline.
 // Updates arrive when CACHE above changes: the browser installs the new worker, and the page offers a reload.
 self.addEventListener('fetch', (event) => {
@@ -43,10 +47,11 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
+    // Pages open from the cached './' (the app's start page), so a host that redirects /index.html to / can't break offline opens
     const cached = req.mode === 'navigate'
-      ? await cache.match('./index.html')
+      ? await cache.match('./')
       : await cache.match(req, { ignoreSearch: true });
-    if (cached) return cached;
+    if (cached) return plain(cached);
     try {
       return await fetch(req);
     } catch {
