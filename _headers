@@ -1,0 +1,4 @@
+# Beta only: asks search engines not to list this site.
+# Delete this file when merging dev into main, or the stable app would stop appearing in search.
+/*
+  X-Robots-Tag: noindex, nofollow
