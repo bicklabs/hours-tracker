@@ -188,7 +188,9 @@ Then open http://localhost:8765.
 Upload the folder to any static host that serves over HTTPS, such as GitHub Pages, Netlify or Cloudflare. This repository is currently deployed with GitHub Pages (stable) and Cloudflare (beta).
 
 ### Updating the App
-After you change any file, bump `CACHE` in `sw.js` (for example `clinical-hours-v11`) and upload the changed files. The next time the app is opened, it downloads the new version and shows a **"New version ready · Tap to update"** banner. If you skip the version bump, phones keep running the old copy. A shift in progress is stored on the device and isn't affected by an update.
+After you change any app file, change the version in two places: `CACHE` in `sw.js` (for example `clinical-hours-1.0.3`) and the version at the bottom of Settings in `index.html`. Then upload the changed files. The next time the app is opened, it downloads the new version and shows a **"New version ready · Tap to update"** banner. If you skip the version change, phones keep running the old copy. A shift in progress is stored on the device and isn't affected by an update.
+
+Versions use `MAJOR.MINOR.PATCH`: a patch for fixes, a minor for new features, a major for big changes. The `dev` branch adds a suffix such as `-beta.1` (for example `1.1.0-beta.1`), which is dropped when the change is promoted to `main`. Versions before 1.0.0 were plain numbers: version 9 is 1.0.0, version 10 is 1.0.1 and version 11 is 1.0.2.
 
 ### Testing Changes Before Everyone Gets Them
 The repo has two branches:

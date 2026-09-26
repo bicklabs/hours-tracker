@@ -1,6 +1,6 @@
 # Project Audit
 
-**Audited:** 2026-09-26, on branch `dev` (version 9). **Method:** reading the source, pattern searches over every file, comparing the served pages to the repository, and one browser session with network monitoring. **Not a legal review and not a penetration test.** Where something couldn't be established, it says so.
+**Audited:** 2026-09-26, on branch `dev` (then labeled "version 9", now 1.0.0 under semantic versioning; versions 10 and 11 became 1.0.1 and 1.0.2). **Method:** reading the source, pattern searches over every file, comparing the served pages to the repository, and one browser session with network monitoring. **Not a legal review and not a penetration test.** Where something couldn't be established, it says so.
 
 Classification used below: **VERIFIED** (checked in code or by observation), **NEEDS MANUAL REVIEW** (a decision or outside fact only you can settle), **POTENTIAL ISSUE** (a real weakness or risk), **NOT APPLICABLE**.
 

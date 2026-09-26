@@ -2249,7 +2249,7 @@
     $('#custom-locations').innerHTML = rows.length
       ? rows.map((r) => `
           <div class="loc-row ${catClass(r.cat)}">${badge(r.cat, 'sm', 16)}
-            <span class="row-main"><span>${esc(r.l)}</span><span class="row-sub">${esc(r.cat)}</span></span>
+            <span class="row-main"><span class="row-title" title="${esc(r.l)}">${esc(r.l)}</span><span class="row-sub">${esc(r.cat)}</span></span>
             <button type="button" class="remove-btn" data-remove-cat="${esc(r.cat)}" data-remove-loc="${esc(r.l)}" aria-label="Remove ${esc(r.l)}">Remove</button>
           </div>`).join('')
       : '<p class="empty">None yet. Add one when you clock in, or restore a backup that has your locations.</p>';
