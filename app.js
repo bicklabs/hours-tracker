@@ -15,6 +15,7 @@
   const MAX_CATEGORY_NAME = 24;
   const LONG_SESSION_HOURS = 24; // ask "Still clocked in?" after this long
   const MAX_SAVED_REPORTS = 30;
+  const BACKUP_NUDGE_ENTRIES = 3; // auto-suggest a backup after this many new entries
   // Experience types used by most graduate and health-professions applications
   const EXPERIENCE_TYPES = [
     'Paid Employment - Medical/Clinical',
@@ -231,6 +232,11 @@
   const saveActive = () => store.write(KEYS.active, state.active);
   const saveLocations = () => store.write(KEYS.locations, state.customLocations);
   const savePrefs = () => store.write(KEYS.prefs, state.prefs);
+  // Counts new entries since the last backup, so a backup can be suggested automatically
+  function noteEntriesLogged(n = 1) {
+    state.prefs.entriesSinceBackup = (state.prefs.entriesSinceBackup || 0) + n;
+    savePrefs();
+  }
   const saveCategories = () => store.write(KEYS.categories, state.categories);
   const saveLocDetails = () => store.write(KEYS.locationDetails, state.locDetails);
   const saveReports = () => store.write(KEYS.reports, state.reports);
@@ -490,10 +496,22 @@
       $('#install-actions').classList.toggle('single', !installPrompt);
     }
     $('#welcome-card').hidden = !!state.prefs.welcomed || install;
-    // Monthly backup reminder: from the 1st of each month until you back up or dismiss it
+    // Backup reminder: shows once a month, or as soon as a few entries have piled up since the last backup, until backed up or dismissed
     const thisMonth = monthKey(now);
-    const backedUp = state.prefs.lastBackupAt && monthKey(new Date(state.prefs.lastBackupAt)) === thisMonth;
-    $('#backup-nudge').hidden = !state.entries.length || backedUp || state.prefs.nudgeDismissed === thisMonth || !state.prefs.welcomed || install;
+    const backedUpThisMonth = state.prefs.lastBackupAt && monthKey(new Date(state.prefs.lastBackupAt)) === thisMonth;
+    const sinceBackup = state.prefs.entriesSinceBackup || 0;
+    const dueByCount = sinceBackup >= BACKUP_NUDGE_ENTRIES;
+    const due = dueByCount || !backedUpThisMonth;
+    const dismissedAt = state.prefs.nudgeDismissedAt;
+    // Re-show after a dismissal only once the month changes or more entries are logged than when it was dismissed
+    const dismissed = dismissedAt && dismissedAt.month === thisMonth && sinceBackup <= dismissedAt.count;
+    $('#backup-nudge').hidden = !state.entries.length || !due || dismissed || !state.prefs.welcomed || install;
+    if (!$('#backup-nudge').hidden) {
+      $('#nudge-title').textContent = dueByCount ? 'Back Up Your Hours' : 'Monthly Backup';
+      $('#nudge-sub').textContent = dueByCount
+        ? `You've logged ${plural(sinceBackup, 'entry', 'entries')} since your last backup. Save a copy to Files.`
+        : "It's a new month. Save a copy of your hours to Files.";
+    }
     const a = state.active;
     $('#home-idle').hidden = !!a;
     $('#home-active').hidden = !a;
@@ -702,6 +720,7 @@
       state.entries.pop();
       return;
     }
+    noteEntriesLogged();
     state.active = null;
     saveActive();
     render();
@@ -1006,6 +1025,7 @@
       state.entries.pop();
       return;
     }
+    noteEntriesLogged();
     state.prefs.lastCategory = data.category;
     state.prefs.lastLocation[data.category] = data.location;
     savePrefs();
@@ -1329,13 +1349,14 @@
       activeSession: state.active,
       prefs: state.prefs,
     };
-    const stamp = `${toDateInput(now)}_${pad(now.getHours())}${pad(now.getMinutes())}`;
-    const ok = await saveFile(`clinical-hours-backup_${stamp}.json`, JSON.stringify(data, null, 2), 'application/json');
+    // Same filename every time, so re-saving to the same Files folder replaces the old copy instead of piling up new ones
+    const ok = await saveFile('clinical-hours-backup.json', JSON.stringify(data, null, 2), 'application/json');
     if (!ok) {
       if (previousBackup) state.prefs.lastBackupAt = previousBackup;
       else delete state.prefs.lastBackupAt;
     }
     if (ok) {
+      state.prefs.entriesSinceBackup = 0;
       savePrefs();
       renderData();
       toast(`Backed up ${plural(state.entries.length, 'entry', 'entries')}`);
@@ -1463,6 +1484,7 @@
     saveActive();
     saveLocDetails();
     saveReports();
+    state.prefs.entriesSinceBackup = 0;
     saveImports();
     savePrefs();
     applyTheme();
@@ -2016,6 +2038,7 @@
       state.entries = state.entries.filter((e) => e.importId !== id);
       return;
     }
+    noteEntriesLogged(entries.length);
     const hours = sumHours(entries);
     state.imports.unshift({
       id,
@@ -2993,7 +3016,7 @@
     });
     setupImport();
     $('#nudge-later').addEventListener('click', () => {
-      state.prefs.nudgeDismissed = monthKey(new Date());
+      state.prefs.nudgeDismissedAt = { month: monthKey(new Date()), count: state.prefs.entriesSinceBackup || 0 };
       savePrefs();
       renderHome();
     });

@@ -109,7 +109,8 @@ How this was checked, and its limits, are in [PROJECT-AUDIT.md](PROJECT-AUDIT.md
 
 ## Backup and Recovery
 
-- **How:** Reports › Backup › **Back Up Now** creates one file named `clinical-hours-backup_<date>_<time>.json`. On a phone it opens the share sheet so you can save it to Files. Use **Restore** to load it, then choose **Merge** (adds what's missing) or **Replace All** (erases what's on the device and uses only the backup).
+- **How:** Reports › Backup › **Back Up Now** creates one file, always named `clinical-hours-backup.json`. On a phone it opens the share sheet so you can save it to Files; saving to a folder that already has that file offers to replace it, so backups don't pile up. Use **Restore** to load it, then choose **Merge** (adds what's missing) or **Replace All** (erases what's on the device and uses only the backup).
+- **Automatic reminder:** the app suggests a backup on its own, either once a month or after about 3 new entries since your last backup, whichever comes first. It's a reminder you tap through, not a silent save — see the note below on why.
 - **What it contains:** entries with notes and Highlights, categories and goals, saved locations and their contact details, saved reports, past imports, and your settings, including theme and Pre-Health Track.
 - **It is not encrypted.** The backup is a plain text JSON file. It includes notes and contact details, so store and send it carefully.
 - **It stays on your device** until you move it. The app never uploads it. Anything you do with the file afterward (email, cloud drive) is up to you.
@@ -129,6 +130,8 @@ What can lose your hours:
 | Your browser removes stored data on its own | This can happen on some browsers, for example after a long time without use. The app asks the browser to keep its data, but that is a request, not a guarantee. Back up monthly |
 
 Back up regularly, and keep a copy somewhere other than your phone.
+
+**Why backups aren't fully automatic.** A web app like this one can't silently write a file to your phone's storage in the background — every save needs a tap, so that a page can't quietly drop files onto your device without you knowing. That's a browser and iOS restriction, not a choice this app makes. What the app does instead is watch your activity and put the backup one tap away right when it's worth doing, and it reuses the same filename so you're not left with a folder full of dated copies.
 
 ## Application Reports
 
