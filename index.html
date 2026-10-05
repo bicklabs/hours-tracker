@@ -58,7 +58,7 @@
       <section class="card nudge-card" id="backup-nudge" hidden>
         <div class="nudge-row">
           <span class="nudge-icon" data-icon="bulb"></span>
-          <span class="nudge-text"><strong>Monthly Backup</strong><span>It's a new month. Save a copy of your hours to Files.</span></span>
+          <span class="nudge-text"><strong id="nudge-title">Monthly Backup</strong><span id="nudge-sub">It's a new month. Save a copy of your hours to Files.</span></span>
         </div>
         <div class="split-actions">
           <button type="button" class="btn btn-soft" id="nudge-later">Not Now</button>
@@ -336,6 +336,13 @@
         <span>Or add a new location</span>
         <input type="text" id="ci-new" class="input-pill" placeholder="Location name" enterkeyhint="go">
       </label>
+      <div id="ci-project-wrap" hidden>
+        <label class="field">
+          <span>Project (optional)</span>
+          <input type="text" id="ci-project" class="input-pill" maxlength="60" placeholder="For example, Mouse behavior study" enterkeyhint="go">
+        </label>
+        <div class="proj-chips" id="ci-project-chips" hidden></div>
+      </div>
       <p class="form-error" id="ci-error" role="alert" hidden></p>
       <div class="two-col">
         <button type="button" class="btn btn-outline" data-close>Cancel</button>
@@ -441,7 +448,7 @@
         <button type="button" class="btn btn-danger-outline btn-block" id="btn-erase"><span data-icon="trash"></span>Erase All Data</button>
       </section>
       <button type="button" class="btn btn-primary btn-block" data-close>Done</button>
-      <p class="footer-note">Clinical Hours · Version 1.0.2</p>
+      <p class="footer-note">Clinical Hours · Version 1.2.0</p>
     </div>
   </dialog>
 
@@ -463,6 +470,10 @@
           <span class="goal-input"><input type="number" name="goal" min="1" max="100000" step="1" inputmode="numeric" placeholder="None"><span>hrs</span></span>
         </label>
         <p class="hint">Leave blank for no goal. A goal adds a progress bar to this category's tile.</p>
+        <label class="set-row hl-row">
+          <span class="row-main"><span class="row-title title-with-pill">Track Projects<span class="beta-pill">Beta</span></span><span class="row-sub">Adds an optional Project field, like separate studies inside one lab</span></span>
+          <input type="checkbox" class="switch" role="switch" name="projects">
+        </label>
         <p class="form-error" id="cat-error" role="alert" hidden></p>
       </section>
       <div class="two-col">
@@ -503,6 +514,7 @@
       </header>
       <div class="stack">
         <section class="card" id="loc-stats"></section>
+        <section class="card" id="loc-projects" hidden></section>
         <section class="card">
           <div class="card-head"><span class="card-icon" data-icon="clipboard"></span><h2>Application Details</h2><span id="loc-missing"></span></div>
           <label class="field"><span>Organization</span><input type="text" name="organization" maxlength="120" placeholder="Official name, if different"></label>
@@ -601,6 +613,13 @@
         <span>New location name</span>
         <input type="text" name="newLocation" placeholder="Location name">
       </label>
+      <div data-role="project" hidden>
+        <label class="field">
+          <span>Project (optional)</span>
+          <input type="text" name="project" maxlength="60" placeholder="For example, Mouse behavior study">
+        </label>
+        <div class="proj-chips" data-role="project-chips" hidden></div>
+      </div>
       <label class="field">
         <span>Date</span>
         <input type="date" name="date">

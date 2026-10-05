@@ -15,6 +15,8 @@
   const MAX_CATEGORY_NAME = 24;
   const LONG_SESSION_HOURS = 24; // ask "Still clocked in?" after this long
   const MAX_SAVED_REPORTS = 30;
+  const MAX_PROJECT_NAME = 60;
+  const BACKUP_NUDGE_ENTRIES = 3; // auto-suggest a backup after this many new entries
   // Experience types used by most graduate and health-professions applications
   const EXPERIENCE_TYPES = [
     'Paid Employment - Medical/Clinical',
@@ -213,6 +215,7 @@
       shade: SHADES.includes(c.shade) ? c.shade : 5,
       ...(c.hidden ? { hidden: true } : {}),
       ...(Number(c.goal) > 0 ? { goal: Math.round(Number(c.goal)) } : {}),
+      ...(c.projects ? { projects: true } : {}),
     };
   }
 
@@ -231,6 +234,11 @@
   const saveActive = () => store.write(KEYS.active, state.active);
   const saveLocations = () => store.write(KEYS.locations, state.customLocations);
   const savePrefs = () => store.write(KEYS.prefs, state.prefs);
+  // Counts new entries since the last backup, so a backup can be suggested automatically
+  function noteEntriesLogged(n = 1) {
+    state.prefs.entriesSinceBackup = (state.prefs.entriesSinceBackup || 0) + n;
+    savePrefs();
+  }
   const saveCategories = () => store.write(KEYS.categories, state.categories);
   const saveLocDetails = () => store.write(KEYS.locationDetails, state.locDetails);
   const saveReports = () => store.write(KEYS.reports, state.reports);
@@ -249,6 +257,51 @@
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
   const findCat = (name) => state.categories.find((c) => c.name === name);
+
+  // ----- Projects: an optional label inside a location (for example, separate studies in one lab), switched on per category
+  const tracksProjects = (cat) => !!findCat(cat)?.projects;
+  const cleanProject = (v) => String(v ?? '').trim().replace(/\s+/g, ' ').slice(0, MAX_PROJECT_NAME);
+  // Projects used before at a location, most recent first
+  function projectsFor(cat, loc) {
+    const seen = new Map();
+    for (const e of state.entries) {
+      if (e.category !== cat || e.location !== loc || !e.project) continue;
+      const key = e.project.toLowerCase(), t = new Date(e.start).getTime();
+      if (!seen.has(key) || seen.get(key).t < t) seen.set(key, { name: e.project, t });
+    }
+    return [...seen.values()].sort((a, b) => b.t - a.t).map((x) => x.name);
+  }
+  // Tap-to-fill buttons for projects used before at this location
+  function renderProjectChips(box, cat, loc) {
+    const list = cat && loc && loc !== NEW_LOC ? projectsFor(cat, loc).slice(0, 6) : [];
+    box.hidden = !list.length;
+    box.innerHTML = list.map((p) => `<button type="button" data-proj="${esc(p)}">${esc(p)}</button>`).join('');
+  }
+  function bindProjectChips(box, input) {
+    box.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-proj]');
+      if (b) input.value = b.dataset.proj;
+    });
+  }
+  // Hours per project for a set of entries, with the entries that have no project listed last
+  function projectTotals(entries) {
+    const map = new Map();
+    const none = { name: 'No project', hours: 0, count: 0, none: true };
+    for (const e of entries) {
+      if (!e.project) {
+        none.hours += hoursOf(e);
+        none.count++;
+        continue;
+      }
+      const key = e.project.toLowerCase();
+      const p = map.get(key) || { name: e.project, hours: 0, count: 0 };
+      p.hours += hoursOf(e);
+      p.count++;
+      map.set(key, p);
+    }
+    const list = [...map.values()].sort((a, b) => b.hours - a.hours);
+    return list.length && none.count ? [...list, none] : list;
+  }
   const catClass = (name) => 'shade-' + (findCat(name)?.shade || 5);
   const catIcon = (name) => findCat(name)?.icon || 'clipboard';
   const badge = (c, cls = '', size = 20) => `<span class="badge ${cls}" title="${esc(c)}">${icon(catIcon(c), size)}</span>`;
@@ -449,6 +502,7 @@
       <span class="row-main">
         <span class="row-title">${esc(e.location)}${e.highlight ? `<span class="row-star" title="Highlight">${icon('starfill', 14)}</span>` : ''}</span>
         <span class="row-sub">${lead} · ${e.timesUnknown ? 'Times not recorded' : `${fmtTime(s)} - ${fmtTime(en)}`}</span>
+        ${e.project ? `<span class="row-proj">${esc(e.project)}</span>` : ''}
         ${e.notes ? `<span class="row-notes">${esc(e.notes)}</span>` : ''}
       </span>
       <span class="row-end"><strong>${fmtHours(hoursOf(e))}</strong><span>hrs</span></span>
@@ -490,10 +544,22 @@
       $('#install-actions').classList.toggle('single', !installPrompt);
     }
     $('#welcome-card').hidden = !!state.prefs.welcomed || install;
-    // Monthly backup reminder: from the 1st of each month until you back up or dismiss it
+    // Backup reminder: shows once a month, or as soon as a few entries have piled up since the last backup, until backed up or dismissed
     const thisMonth = monthKey(now);
-    const backedUp = state.prefs.lastBackupAt && monthKey(new Date(state.prefs.lastBackupAt)) === thisMonth;
-    $('#backup-nudge').hidden = !state.entries.length || backedUp || state.prefs.nudgeDismissed === thisMonth || !state.prefs.welcomed || install;
+    const backedUpThisMonth = state.prefs.lastBackupAt && monthKey(new Date(state.prefs.lastBackupAt)) === thisMonth;
+    const sinceBackup = state.prefs.entriesSinceBackup || 0;
+    const dueByCount = sinceBackup >= BACKUP_NUDGE_ENTRIES;
+    const due = dueByCount || !backedUpThisMonth;
+    const dismissedAt = state.prefs.nudgeDismissedAt;
+    // Re-show after a dismissal only once the month changes or more entries are logged than when it was dismissed
+    const dismissed = dismissedAt && dismissedAt.month === thisMonth && sinceBackup <= dismissedAt.count;
+    $('#backup-nudge').hidden = !state.entries.length || !due || dismissed || !state.prefs.welcomed || install;
+    if (!$('#backup-nudge').hidden) {
+      $('#nudge-title').textContent = dueByCount ? 'Back Up Your Hours' : 'Monthly Backup';
+      $('#nudge-sub').textContent = dueByCount
+        ? `You've logged ${plural(sinceBackup, 'entry', 'entries')} since your last backup. Save a copy to Files.`
+        : "It's a new month. Save a copy of your hours to Files.";
+    }
     const a = state.active;
     $('#home-idle').hidden = !!a;
     $('#home-active').hidden = !a;
@@ -504,7 +570,7 @@
       $('#hero-date').textContent = toDateInput(start) === toDateInput(now) ? fmtShort(start) : `Since ${fmtShort(start)}`;
       $('#hero-icon').innerHTML = icon(catIcon(a.category), 28);
       $('#hero-cat').textContent = a.category;
-      $('#hero-loc').textContent = a.location;
+      $('#hero-loc').textContent = a.project ? `${a.location} · ${a.project}` : a.location;
       const t = fmtTime(start).split(' ');
       $('#hero-start').innerHTML = `${t[0]} <small>${t[1]}</small>`;
       hero.dataset.cat = a.category;
@@ -599,9 +665,18 @@
       : `<p class="empty">No saved ${esc(cat)} locations yet. Type one below and it will be saved for next time.</p>`;
     $('#ci-new').value = '';
     $('#ci-error').hidden = true;
+    $('#ci-project').value = '';
+    $('#ci-project-wrap').hidden = !tracksProjects(cat);
+    refreshClockInProjects();
     dlg.showModal();
     // Keep the keyboard from popping open on the text field
     $('#ci-submit').focus();
+  }
+
+  function refreshClockInProjects() {
+    const dlg = $('#clockin-sheet');
+    const picked = $('input[name="ci-loc"]:checked', dlg)?.value;
+    renderProjectChips($('#ci-project-chips'), dlg.dataset.category, $('#ci-new').value.trim() ? '' : picked);
   }
 
   function submitClockIn(e) {
@@ -617,7 +692,8 @@
       return;
     }
     const location = typed ? addLocation(cat, typed) : picked;
-    state.active = { category: cat, location, start: new Date().toISOString() };
+    const project = tracksProjects(cat) ? cleanProject($('#ci-project').value) : '';
+    state.active = { category: cat, location, start: new Date().toISOString(), ...(project ? { project } : {}) };
     state.prefs.lastLocation[cat] = location;
     saveActive();
     savePrefs();
@@ -693,6 +769,7 @@
       start: start.toISOString(),
       end: end.toISOString(),
       notes: '',
+      ...(a.project ? { project: a.project } : {}),
       source: 'clock',
       createdAt: now,
       updatedAt: now,
@@ -702,6 +779,7 @@
       state.entries.pop();
       return;
     }
+    noteEntriesLogged();
     state.active = null;
     saveActive();
     render();
@@ -826,19 +904,32 @@
     $('.fields', form).appendChild($('#entry-fields-tpl').content.cloneNode(true));
     fillIcons(form);
     const f = form.elements;
+    bindProjectChips($('[data-role="project-chips"]', form), f.project);
     $('[data-role="cats"]', form).addEventListener('change', () => {
       const cat = f.category.value;
       fillLocationSelect(form, cat, state.prefs.lastLocation[cat]);
+      f.project.value = '';
+      updateProjectField(form);
     });
     f.location.addEventListener('change', () => {
       const isNew = f.location.value === NEW_LOC;
       $('[data-role="new-location"]', form).hidden = !isNew;
       if (isNew) f.newLocation.focus();
+      f.project.value = '';
+      updateProjectField(form);
     });
     for (const n of ['date', 'start', 'end']) {
       f[n].addEventListener('input', () => updateDurationHint(form));
       f[n].addEventListener('change', () => updateDurationHint(form));
     }
+  }
+
+  // The Project field shows for categories that track projects, or when an entry already has one
+  function updateProjectField(form) {
+    const f = form.elements;
+    const show = tracksProjects(f.category.value) || !!f.project.value;
+    $('[data-role="project"]', form).hidden = !show;
+    renderProjectChips($('[data-role="project-chips"]', form), f.category.value, show ? f.location.value : '');
   }
 
   function fillCategoryPicker(form, selected) {
@@ -880,6 +971,8 @@
     f.end.value = e.endTime || '';
     f.notes.value = e.notes || '';
     f.highlight.checked = !!e.highlight;
+    f.project.value = e.project || '';
+    updateProjectField(form);
     showFormError(form, '');
     updateDurationHint(form);
   }
@@ -940,6 +1033,7 @@
       end: r.end.toISOString(),
       notes: f.notes.value.trim(),
       highlight: f.highlight.checked,
+      project: cleanProject(f.project.value),
     };
   }
 
@@ -999,6 +1093,7 @@
     if (!data) return;
     if (!(await confirmOverlap(data.start, data.end))) return;
     if (!data.highlight) delete data.highlight;
+    if (!data.project) delete data.project;
     const now = new Date().toISOString();
     const entry = { id: uid(), ...data, source: 'manual', createdAt: now, updatedAt: now };
     state.entries.push(entry);
@@ -1006,11 +1101,12 @@
       state.entries.pop();
       return;
     }
+    noteEntriesLogged();
     state.prefs.lastCategory = data.category;
     state.prefs.lastLocation[data.category] = data.location;
     savePrefs();
     // Keep the date, category and location for quick back-to-back entries; clear the times
-    fillEntryForm(form, { date: form.elements.date.value, category: data.category, location: data.location });
+    fillEntryForm(form, { date: form.elements.date.value, category: data.category, location: data.location, project: data.project });
     renderHome();
     toast(`Saved ${fmtHours(hoursOf(entry))} hrs · ${data.location}`);
   }
@@ -1032,6 +1128,7 @@
       endTime: toTimeInput(en),
       notes: e.notes,
       highlight: e.highlight,
+      project: e.project,
     });
     const dlg = $('#edit-sheet');
     dlg.showModal();
@@ -1051,6 +1148,7 @@
     // Spread the old entry first so any extra fields are preserved
     state.entries[idx] = { ...prev, ...data, updatedAt: new Date().toISOString() };
     if (!data.highlight) delete state.entries[idx].highlight;
+    if (!data.project) delete state.entries[idx].project;
     // Times added to an imported shift that had none
     if (prev.timesUnknown && (data.start !== prev.start || data.end !== prev.end)) delete state.entries[idx].timesUnknown;
     if (!saveEntries()) {
@@ -1220,7 +1318,7 @@
     const list = shownEntries()
       .filter((e) => (!filters.category || e.category === filters.category) && (!filters.location || e.location === filters.location))
       .filter((e) => !filters.highlight || e.highlight)
-      .filter((e) => !q || [e.location, e.notes, e.category].some((v) => (v || '').toLowerCase().includes(q)))
+      .filter((e) => !q || [e.location, e.notes, e.category, e.project].some((v) => (v || '').toLowerCase().includes(q)))
       .sort(byStartDesc);
     $('#h-total').textContent = fmtBig(sumHours(list));
     $('#h-count').textContent = `Hours across ${plural(list.length, 'entry', 'entries')}`;
@@ -1329,13 +1427,14 @@
       activeSession: state.active,
       prefs: state.prefs,
     };
-    const stamp = `${toDateInput(now)}_${pad(now.getHours())}${pad(now.getMinutes())}`;
-    const ok = await saveFile(`clinical-hours-backup_${stamp}.json`, JSON.stringify(data, null, 2), 'application/json');
+    // Same filename every time, so re-saving to the same Files folder replaces the old copy instead of piling up new ones
+    const ok = await saveFile('clinical-hours-backup.json', JSON.stringify(data, null, 2), 'application/json');
     if (!ok) {
       if (previousBackup) state.prefs.lastBackupAt = previousBackup;
       else delete state.prefs.lastBackupAt;
     }
     if (ok) {
+      state.prefs.entriesSinceBackup = 0;
       savePrefs();
       renderData();
       toast(`Backed up ${plural(state.entries.length, 'entry', 'entries')}`);
@@ -1349,7 +1448,7 @@
     if (isNaN(s) || isNaN(e) || e < s) return null;
     if (typeof r.category !== 'string' || !r.category.trim()) return null;
     if (typeof r.location !== 'string' || !r.location.trim()) return null;
-    return {
+    const entry = {
       ...r,
       id: typeof r.id === 'string' && r.id ? r.id : uid(),
       category: r.category.trim(),
@@ -1357,6 +1456,9 @@
       start: s.toISOString(),
       end: e.toISOString(),
     };
+    if (typeof r.project === 'string' && cleanProject(r.project)) entry.project = cleanProject(r.project);
+    else delete entry.project;
+    return entry;
   }
 
   function normalizeActive(a) {
@@ -1463,6 +1565,7 @@
     saveActive();
     saveLocDetails();
     saveReports();
+    state.prefs.entriesSinceBackup = 0;
     saveImports();
     savePrefs();
     applyTheme();
@@ -2016,6 +2119,7 @@
       state.entries = state.entries.filter((e) => e.importId !== id);
       return;
     }
+    noteEntriesLogged(entries.length);
     const hours = sumHours(entries);
     state.imports.unshift({
       id,
@@ -2271,6 +2375,7 @@
   const fmtBig = (h) => (Math.round(h * 100) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const fmtMonthYear = (d) => d.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
   const locKey = (cat, loc) => `${cat}::${loc}`;
+  const projectCount = (g) => projectTotals(g.entries).filter((p) => !p.none).length;
   const detailsMissing = (d) => !d || !d.contactName || !d.contactEmail;
 
   // Groups entries by category and location, biggest first
@@ -2316,7 +2421,7 @@
         <span class="row-main">
           <span class="row-title">${esc(g.location)}</span>
           <span class="row-sub">${fmtMonthYear(g.first)} - ${fmtMonthYear(g.last)}</span>
-          <span class="row-sub">${plural(g.count, 'entry', 'entries')}</span>
+          <span class="row-sub">${plural(g.count, 'entry', 'entries')}${projectCount(g) ? ` · ${plural(projectCount(g), 'project', 'projects')}` : ''}</span>
           ${detailsMissing(state.locDetails[g.key]) ? '<span class="warn-pill">Add contact details</span>' : ''}
         </span>
         <span class="row-end"><strong>${fmtBig(g.hours)}</strong><span>hrs</span></span>
@@ -2354,6 +2459,10 @@
     $('#loc-highlights').innerHTML = `<div class="card-head"><span class="card-icon">${icon('star', 18)}</span><h2>Highlights</h2><span class="soft-pill">${hl.length}</span></div>` +
       (hl.length ? hl.map((e) => `<div class="hl-item"><span>${icon('starfill', 16)}</span><span><small>${fmtShortDate(e.start)}</small><p>${esc(e.notes || 'No note')}</p></span></div>`).join('')
         : '<p class="empty">Turn on Highlight when you add a note, and those shifts show up here.</p>');
+    const projects = projectTotals(g.entries);
+    $('#loc-projects').hidden = !projects.length;
+    $('#loc-projects').innerHTML = projects.length ? `<div class="card-head"><span class="card-icon">${icon('flask', 18)}</span><h2>Projects</h2><span class="soft-pill">${projects.filter((p) => !p.none).length}</span></div>
+      <div class="proj-list">${projects.map((p) => `<div class="proj-row${p.none ? ' none' : ''}"><span class="row-main"><span class="row-title">${esc(p.name)}</span><span class="row-sub">${plural(p.count, 'entry', 'entries')}</span></span><span class="row-end"><strong>${fmtBig(p.hours)}</strong><span>hrs</span></span></div>`).join('')}</div>` : '';
     $('#loc-sheet').showModal();
     $('#loc-sheet').scrollTop = 0;
     $('[data-close]', $('#loc-sheet')).focus();
@@ -2441,6 +2550,7 @@
     return hl.length ? `<p><strong>Highlights</strong></p>${hl.map((e) => `<blockquote>${fmtShortDate(e.start)}: ${esc(e.notes || 'No note')}</blockquote>`).join('')}` : '';
   };
   const contactOf = (d) => [d.contactName, d.contactTitle].filter(Boolean).join(', ');
+  const projectsLine = (g) => projectTotals(g.entries).filter((p) => !p.none).map((p) => `${p.name} (${fmtBig(p.hours)} hrs)`).join('; ');
   const datesOf = (g) => `${fmtMonthYear(g.first)} - ${fmtMonthYear(g.last)}`;
   const weeksOf = (g) => Math.max(1, Math.ceil((g.last - g.first) / (7 * 86400000)));
 
@@ -2454,6 +2564,7 @@
         ${packetRow('Experience type', d.experienceType)}
         ${packetRow('Dates', datesOf(g))}
         ${packetRow('Total hours', `${fmtBig(g.hours)} (${plural(g.count, 'entry', 'entries')})`)}
+        ${packetRow('Projects', projectsLine(g))}
         ${packetRow('Contact', contactOf(d))}
         ${packetRow('Email', d.contactEmail)}
         ${packetRow('Phone', d.contactPhone)}
@@ -2475,6 +2586,7 @@
         ${packetRow('Organization', d.organization)}
         ${packetRow('Start / End Date', datesOf(g))}
         ${packetRow('Total Hours', fmtBig(g.hours))}
+        ${packetRow('Projects', projectsLine(g))}
         ${packetRow('Contact Name', d.contactName)}
         ${packetRow('Contact Title', d.contactTitle)}
         ${packetRow('Contact Email', d.contactEmail)}
@@ -2497,6 +2609,7 @@
         ${packetRow('Start / End Date', datesOf(g))}
         ${packetRow('Total Hours', fmtBig(g.hours))}
         ${packetRow('Average Hours per Week', fmtHours(g.hours / weeksOf(g)))}
+        ${packetRow('Projects', projectsLine(g))}
         ${packetRow('Contact', contactOf(d))}
         ${packetRow('Email', d.contactEmail)}
         ${packetRow('Phone', d.contactPhone)}
@@ -2643,6 +2756,7 @@
     form.dataset.icon = cat ? cat.icon : CATEGORY_ICONS.find((i) => !state.categories.some((c) => c.icon === i)) || 'clipboard';
     form.dataset.shade = String(cat ? cat.shade : nextShade());
     form.elements.goal.value = cat && cat.goal ? cat.goal : '';
+    form.elements.projects.checked = !!(cat && cat.projects);
     $('#cat-sheet-title').textContent = cat ? 'Edit Category' : 'New Category';
     $('#cat-error').hidden = true;
     const count = cat ? state.entries.filter((e) => e.category === cat.name).length : 0;
@@ -2711,6 +2825,7 @@
     const iconName = form.dataset.icon, shade = Number(form.dataset.shade);
     const goalText = form.elements.goal.value.trim();
     const goal = goalText ? Math.round(Number(goalText)) : 0;
+    const projects = form.elements.projects.checked;
     if (goalText && !(goal > 0 && goal <= 100000)) return fail('Enter a goal between 1 and 100,000 hours, or leave it blank.');
     if (editingCat) {
       const cat = findCat(editingCat);
@@ -2718,8 +2833,10 @@
       Object.assign(cat, { name, icon: iconName, shade });
       if (goal) cat.goal = goal;
       else delete cat.goal;
+      if (projects) cat.projects = true;
+      else delete cat.projects;
     } else {
-      state.categories.push({ name, icon: iconName, shade, ...(goal ? { goal } : {}) });
+      state.categories.push({ name, icon: iconName, shade, ...(goal ? { goal } : {}), ...(projects ? { projects: true } : {}) });
     }
     saveCategories();
     addFormReady = false;
@@ -2817,6 +2934,7 @@
       ['palette', 'Change the color theme', ['Clock', 'Settings', 'Color Theme']],
       ['moon', 'Turn on dark mode', ['Clock', 'Settings', 'Appearance']],
       ['eye', 'Add, edit or hide categories', ['Clock', 'Settings', 'Categories']],
+      ['flask', 'Track projects inside a location (Beta)', ['Clock', 'Settings', 'Categories', 'Edit', 'Track Projects']],
       ['cap', 'Choose your pre-health track (Beta)', ['Clock', 'Settings', 'Pre-Health Track']],
       ['star', 'Set an hour goal', ['Settings', 'Categories', 'Edit']],
     ]],
@@ -2993,7 +3111,7 @@
     });
     setupImport();
     $('#nudge-later').addEventListener('click', () => {
-      state.prefs.nudgeDismissed = monthKey(new Date());
+      state.prefs.nudgeDismissedAt = { month: monthKey(new Date()), count: state.prefs.entriesSinceBackup || 0 };
       savePrefs();
       renderHome();
     });
@@ -3067,11 +3185,14 @@
     // Typing a new name clears the list choice; picking from the list clears the typed name
     $('#ci-new').addEventListener('input', (e) => {
       if (e.target.value.trim()) $$('input[name="ci-loc"]').forEach((r) => (r.checked = false));
+      refreshClockInProjects();
     });
     $('#ci-locations').addEventListener('change', () => {
       $('#ci-new').value = '';
       $('#ci-error').hidden = true;
+      refreshClockInProjects();
     });
+    bindProjectChips($('#ci-project-chips'), $('#ci-project'));
 
     setupEntryForm($('#manual-form'));
     $('#manual-form').addEventListener('submit', submitManual);

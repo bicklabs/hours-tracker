@@ -22,7 +22,7 @@
 |---|---|---|
 | **Clock In and Out**<br>One tap to start a shift. Add a note and Highlight the moments worth writing about. | **Log Past Shifts**<br>Forgot to clock in? Add it later, or repeat a recent shift in one tap. Overlaps get flagged. | **Search Your History**<br>Find any note or location. Filter by category, location or Highlights, and undo a delete. |
 | **Application Reports** `Beta`<br>An Application Packet and an Hours Summary, saved as PDFs. Choose a General, Pre-Med or Pre-PA layout for your experiences. | **Import Your Old Hours** `Beta`<br>Bring in an Excel or CSV file, or paste rows from Google Sheets. Every import can be undone. | **Export and Back Up**<br>CSV for Excel, plus one backup file with everything. Restore it on a new phone. |
-| **Your Own Categories**<br>Add, rename, recolor or hide categories. Set an hour goal and watch the gauge fill. | **Six Color Themes**<br>Blue, Rose, Blossom, Lavender, Sage and Sunset, each with a dark version. | **Stored on Your Device**<br>No account. The app has no analytics and doesn't send your entries anywhere. See [Data and Privacy](#data-and-privacy). |
+| **Your Own Categories**<br>Add, rename, recolor or hide categories. Set an hour goal and watch the gauge fill. Optionally track projects inside a location, such as separate studies in one lab `Beta`. | **Six Color Themes**<br>Blue, Rose, Blossom, Lavender, Sage and Sunset, each with a dark version. | **Stored on Your Device**<br>No account. The app has no analytics and doesn't send your entries anywhere. See [Data and Privacy](#data-and-privacy). |
 
 ### Screenshots
 
@@ -65,6 +65,7 @@ Status labels come from checking each feature in the code. Features marked **Bet
 | History with search, category, location and Highlights filters | Implemented |
 | Calendar with hours shown per day, days colored by the category with the most hours, and a monthly summary | Implemented |
 | Categories: add, rename, choose an icon and color, set an optional hour goal, hide or show. Default categories are Clinical, Shadowing, Volunteering and Research | Implemented |
+| Projects: an optional label on entries inside a location, switched on per category. Shows hours per project on the location page and in the Application Packet | **Beta** |
 | Contact details for each location (name, title, email, phone, city, description). The app calls these "contact" details | Implemented |
 | Color themes (six) and Light, Dark or Match Phone appearance | Implemented |
 | Export CSV and Copy Rows for Excel | Implemented |
@@ -97,7 +98,7 @@ This section describes what the code does, based on a review of the repository. 
 
 - **No account is needed.** There is no sign-in, and the app has no server of its own.
 - **Where your data is stored:** in your browser's `localStorage` on your device, under keys that start with `cht.`. It is stored as plain, unencrypted text.
-- **What is stored:** your entries (date, times, category, location, notes, Highlights), your categories, saved locations and their contact details (names, titles, emails, phone numbers, city, description), saved reports, import history, and settings such as your color theme and Pre-Health Track. Contact details and notes can be personal, so treat your device and your backup files accordingly.
+- **What is stored:** your entries (date, times, category, location, optional project, notes, Highlights), your categories, saved locations and their contact details (names, titles, emails, phone numbers, city, description), saved reports, import history, and settings such as your color theme and Pre-Health Track. Contact details and notes can be personal, so treat your device and your backup files accordingly.
 - **What the app sends:** in the code and in a test session, the app made requests only to the site it was loaded from, to download its own files (page, styles, scripts and font). Nothing in the code sends your entries, notes, locations or contact details to any other service. There are no analytics, tracking, advertising, error-reporting or login services in the code.
 - **What the app can't control:** the sites that host the app (GitHub Pages for the stable version, Cloudflare for the beta) can see normal web request information such as your IP address when your phone downloads the app files. Their own privacy statements apply. Your browser, operating system, extensions and phone backups (for example iCloud or Google backup) are outside this app's control and may handle your device's stored data.
 - **Files you choose to share:** Export CSV, Copy Rows, Back Up, and saving a report as a PDF all put data into a file, the clipboard or your phone's share sheet. From there it goes wherever you send it, such as Files, AirDrop, email or a cloud drive.
@@ -109,7 +110,8 @@ How this was checked, and its limits, are in [PROJECT-AUDIT.md](PROJECT-AUDIT.md
 
 ## Backup and Recovery
 
-- **How:** Reports › Backup › **Back Up Now** creates one file named `clinical-hours-backup_<date>_<time>.json`. On a phone it opens the share sheet so you can save it to Files. Use **Restore** to load it, then choose **Merge** (adds what's missing) or **Replace All** (erases what's on the device and uses only the backup).
+- **How:** Reports › Backup › **Back Up Now** creates one file, always named `clinical-hours-backup.json`. On a phone it opens the share sheet so you can save it to Files; saving to a folder that already has that file offers to replace it, so backups don't pile up. Use **Restore** to load it, then choose **Merge** (adds what's missing) or **Replace All** (erases what's on the device and uses only the backup).
+- **Automatic reminder:** the app suggests a backup on its own, either once a month or after about 3 new entries since your last backup, whichever comes first. It's a reminder you tap through, not a silent save — see the note below on why.
 - **What it contains:** entries with notes and Highlights, categories and goals, saved locations and their contact details, saved reports, past imports, and your settings, including theme and Pre-Health Track.
 - **It is not encrypted.** The backup is a plain text JSON file. It includes notes and contact details, so store and send it carefully.
 - **It stays on your device** until you move it. The app never uploads it. Anything you do with the file afterward (email, cloud drive) is up to you.
@@ -129,6 +131,8 @@ What can lose your hours:
 | Your browser removes stored data on its own | This can happen on some browsers, for example after a long time without use. The app asks the browser to keep its data, but that is a request, not a guarantee. Back up monthly |
 
 Back up regularly, and keep a copy somewhere other than your phone.
+
+**Why backups aren't fully automatic.** A web app like this one can't silently write a file to your phone's storage in the background — every save needs a tap, so that a page can't quietly drop files onto your device without you knowing. That's a browser and iOS restriction, not a choice this app makes. What the app does instead is watch your activity and put the backup one tap away right when it's worth doing, and it reuses the same filename so you're not left with a folder full of dated copies.
 
 ## Application Reports
 
@@ -156,7 +160,7 @@ Reports › Backup › **Import Hours** brings in hours tracked somewhere else. 
 ## Settings
 Tap **Settings** on the Clock screen for:
 - **Quick Guide:** where to find every feature.
-- **Categories:** switch a category off to hide it everywhere. Its hours are kept and come back when you switch it on. Tap the pencil to rename it or change its icon, color and optional hour goal. Tap **Add Category** to create a new one. A category can only be deleted while it has no entries.
+- **Categories:** switch a category off to hide it everywhere. Its hours are kept and come back when you switch it on. Tap the pencil to rename it or change its icon, color and optional hour goal. Switch on **Track Projects** `Beta` to add an optional Project field to that category, for example separate studies inside one lab. Projects you've used before at a location appear as tap-to-fill buttons, and the location page and Application Packet show the hours for each project. Projects aren't included in the CSV export or spreadsheet import. Tap **Add Category** to create a new one. A category can only be deleted while it has no entries.
 - **Pre-Health Track** `Beta`: General, Pre-Med or Pre-PA. It sets the layout of the Application Packet (see [Application Reports](#application-reports)).
 - **Color Theme:** Blue, Rose, Blossom (pastel pink), Lavender, Sage or Sunset, each with six shades of one color for categories.
 - **Appearance:** Light, Dark or Match Phone. Every theme has a dark version.

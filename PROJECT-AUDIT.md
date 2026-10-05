@@ -28,7 +28,7 @@ VERIFIED. All user data is in `localStorage` (via a wrapper in `app.js` around l
 
 | Data (key) | Contents | Why | In backup | In CSV export | In reports | User can edit / delete |
 |---|---|---|---|---|---|---|
-| Entries (`cht.entries.v1`) | Category, location, start, end, notes, Highlight flag, source, import id, timestamps | Core hours log | Yes | Date, location, times, duration only. No notes or category | Highlighted notes appear in the Application Packet | Edit and delete, with Undo after delete |
+| Entries (`cht.entries.v1`) | Category, location, optional project name (up to 60 characters, only on categories that track projects), start, end, notes, Highlight flag, source, import id, timestamps | Core hours log | Yes | Date, location, times, duration only. No notes or category | Highlighted notes appear in the Application Packet | Edit and delete, with Undo after delete |
 | Active shift (`cht.active.v1`) | Category, location, start time | Clocked-in state | Yes | No | No | Clock out or discard |
 | Saved locations (`cht.customLocations.v1`) | Location names per category | Quick pick lists | Yes | No | Names appear | Remove |
 | Location details (`cht.locationDetails.v1`) | Organization, experience type, contact name, title, email, phone, city, description (max 700 characters) | Application details | Yes | No | Yes, in the Application Packet | Edit, or clear all fields |
