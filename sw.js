@@ -1,5 +1,5 @@
 // Change this version whenever you change any app file so phones pick up the update. Keep it the same as the version in index.html.
-const CACHE = 'clinical-hours-1.1.0-beta.1';
+const CACHE = 'clinical-hours-1.2.0-beta.1';
 const ASSETS = [
   './',
   './styles.css',
